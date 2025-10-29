@@ -1,0 +1,4 @@
+uk.org.openseizuredetector.pinetime.test.app-androidTest-0 /home/graham/osd/Android_PineTime_Updater/app/build/generated/res/resValues/androidTest/debug
+uk.org.openseizuredetector.pinetime.test.app-mergeDebugAndroidTestResources-1 /home/graham/osd/Android_PineTime_Updater/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+uk.org.openseizuredetector.pinetime.test.app-mergeDebugAndroidTestResources-2 /home/graham/osd/Android_PineTime_Updater/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+uk.org.openseizuredetector.pinetime.test.app-debugAndroidTest-3 /home/graham/osd/Android_PineTime_Updater/app/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
