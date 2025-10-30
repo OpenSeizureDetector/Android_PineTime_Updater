@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +19,7 @@ import no.nordicsemi.android.dfu.DfuServiceListenerHelper
 import uk.org.openseizuredetector.pinetime.ui.MainScreen
 
 class MainActivity : ComponentActivity() {
+    private final val TAG: String = "MainActivityLog"
 
     private lateinit var viewModel: MainViewModel
 
@@ -28,6 +30,7 @@ class MainActivity : ComponentActivity() {
     // Use DfuProgressListenerAdapter (not nested under DfuServiceListenerHelper)
     private val dfuProgressListener = object : DfuProgressListenerAdapter() {
         override fun onDeviceConnected(deviceAddress: String) {
+            Log.i(TAG, "Device connected: $deviceAddress")
             viewModel.onDfuEvent("Connected to $deviceAddress")
         }
         override fun onDeviceDisconnected(deviceAddress: String) {
@@ -49,6 +52,7 @@ class MainActivity : ComponentActivity() {
         //    viewModel.onDfuError("Device not supported")
         //}
         override fun onError(deviceAddress: String, error: Int, errorType: Int, message: String) {
+            Log.e(TAG, "DFU Error $error: $message")
             viewModel.onDfuError("Error: $message")
         }
         override fun onProgressChanged(
@@ -71,6 +75,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i(TAG, "onCreate called")
         setContent {
             viewModel = viewModel(factory = MainViewModel.factory)
             MaterialTheme {
@@ -93,26 +98,40 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.i(TAG, "onResume called")
         DfuServiceListenerHelper.registerProgressListener(this, dfuProgressListener)
     }
 
     override fun onPause() {
         super.onPause()
+        Log.i(TAG, "onPause called")
         DfuServiceListenerHelper.unregisterProgressListener(this, dfuProgressListener)
     }
 
     private fun requestNeededPermissions() {
         val permissions = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions += Manifest.permission.BLUETOOTH_SCAN
-            permissions += Manifest.permission.BLUETOOTH_CONNECT
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissions += Manifest.permission.BLUETOOTH_SCAN
+            }
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissions += Manifest.permission.BLUETOOTH_CONNECT
+            }
         } else {
-            permissions += Manifest.permission.ACCESS_FINE_LOCATION
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissions += Manifest.permission.ACCESS_FINE_LOCATION
+            }
         }
-        permissionLauncher.launch(permissions.toTypedArray())
+        if (permissions.isNotEmpty()) {
+            Log.i(TAG, "Requesting permissions: $permissions")
+            permissionLauncher.launch(permissions.toTypedArray())
+        } else {
+            Log.i(TAG, "All needed permissions already granted")
+        }
     }
 
     private fun toggleBluetoothEnabled() {
+        Log.i(TAG, "Toggling Bluetooth")
         val manager = getSystemService<BluetoothManager>()
         val adapter = manager?.adapter
         if (adapter != null && !adapter.isEnabled) {

@@ -59,6 +59,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         private val DFU_SERVICE_UUID: UUID = UUID.fromString("00001530-1212-EFDE-1523-785FEABCD123")
     }
 
+    private final val TAG: String = "MainViewModelLog"
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState
 
@@ -71,6 +72,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
     private var dfuController: DfuServiceController? = null
 
     fun startScan() {
+        Log.i(TAG, "Starting scan")
         updateBluetoothState()
         if (!_uiState.value.hasScanPermission) {
             setStatus("Grant required permissions to scan.")
