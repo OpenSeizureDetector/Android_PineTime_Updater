@@ -1,10 +1,9 @@
 package uk.org.openseizuredetector.pinetime
 
 import android.Manifest
-import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
-import android.content.*
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,8 +11,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.getSystemService
+import androidx.lifecycle.viewmodel.compose.viewModel
+import no.nordicsemi.android.dfu.DfuProgressListenerAdapter
 import no.nordicsemi.android.dfu.DfuServiceListenerHelper
 import uk.org.openseizuredetector.pinetime.ui.MainScreen
 
@@ -25,7 +25,8 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> }
 
-    private val dfuProgressListener = object : DfuServiceListenerHelper.DfuProgressListenerAdapter() {
+    // Use DfuProgressListenerAdapter (not nested under DfuServiceListenerHelper)
+    private val dfuProgressListener = object : DfuProgressListenerAdapter() {
         override fun onDeviceConnected(deviceAddress: String) {
             viewModel.onDfuEvent("Connected to $deviceAddress")
         }
@@ -44,9 +45,9 @@ class MainActivity : ComponentActivity() {
         override fun onFirmwareValidating(deviceAddress: String) {
             viewModel.onDfuEvent("Validating firmware")
         }
-        override fun onDeviceNotSupported(deviceAddress: String) {
-            viewModel.onDfuError("Device not supported")
-        }
+        //override fun onDeviceNotSupported(deviceAddress: String) {
+        //    viewModel.onDfuError("Device not supported")
+        //}
         override fun onError(deviceAddress: String, error: Int, errorType: Int, message: String) {
             viewModel.onDfuError("Error: $message")
         }
@@ -70,8 +71,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = viewModel(factory = MainViewModel.factory(application))
         setContent {
+            viewModel = viewModel(factory = MainViewModel.factory)
             MaterialTheme {
                 MainScreen(
                     state = viewModel.uiState.collectAsState().value,

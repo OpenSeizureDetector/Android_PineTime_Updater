@@ -1,7 +1,7 @@
 package uk.org.openseizuredetector.pinetime
 
 import android.app.Application
-import android.bluetooth.*
+import android.bluetooth.BluetoothManager
 import android.bluetooth.le.*
 import android.content.Context
 import android.os.Build
@@ -10,6 +10,7 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,6 @@ import uk.org.openseizuredetector.pinetime.dfu.DfuService
 import uk.org.openseizuredetector.pinetime.net.FirmwareIndexLoader
 import uk.org.openseizuredetector.pinetime.net.FirmwareItem
 import uk.org.openseizuredetector.pinetime.net.FirmwareDownloader
-import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -29,14 +29,12 @@ data class UiState(
     val scanning: Boolean = false,
     val dfuDevices: List<BleDevice> = emptyList(),
     val selectedDevice: BleDevice? = null,
-
     val firmwareItems: List<FirmwareItem> = emptyList(),
     val firmwareIndexStatus: String = "",
     val selectedFirmware: FirmwareItem? = null,
     val downloadStatus: String = "",
     val downloadProgress: Int = 0,
     val downloadedZipPath: String? = null,
-
     val dfuStatus: String = "",
     val dfuProgressPercent: Int = 0,
     val dfuInProgress: Boolean = false,
@@ -51,19 +49,14 @@ data class BleDevice(
 class MainViewModel(private val app: Application) : AndroidViewModel(app) {
 
     companion object {
-        val factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val app = (modelClass.classLoader!!
-                    .loadClass("android.app.AppGlobals")
-                    .getMethod("getInitialApplication")
-                    .invoke(null) as Application)
-                @Suppress("UNCHECKED_CAST")
-                return MainViewModel(app) as T
+        val factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = checkNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
+                return MainViewModel(application) as T
             }
         }
-
-        private val DFU_SERVICE_UUID: UUID =
-            UUID.fromString("00001530-1212-EFDE-1523-785FEABCD123")
+        private val DFU_SERVICE_UUID: UUID = UUID.fromString("00001530-1212-EFDE-1523-785FEABCD123")
     }
 
     private val _uiState = MutableStateFlow(UiState())
@@ -105,8 +98,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 val device = result.device ?: return
                 val name = device.name
-                val hasDfuService =
-                    result.scanRecord?.serviceUuids?.contains(ParcelUuid(DFU_SERVICE_UUID)) == true
+                val hasDfuService = result.scanRecord?.serviceUuids?.contains(ParcelUuid(DFU_SERVICE_UUID)) == true
                 val isDfuName = name?.contains("DfuTarg", ignoreCase = true) == true
                 if (hasDfuService || isDfuName) {
                     val bdAddr = device.address ?: return
@@ -299,6 +291,6 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
     }
 }
 
-private fun uk.org.openseizuredetector.pinetime.net.FirmwareItem.safeName(): String {
+private fun FirmwareItem.safeName(): String {
     return name.replace(Regex("[^A-Za-z0-9._-]"), "_")
 }

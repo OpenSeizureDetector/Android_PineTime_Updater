@@ -2,11 +2,12 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        //maven { url "https://maven.pkg.jetbrains.space/public/p/kotlinx-gradle-plugin/maven" }
     }
     dependencies {
         // Android Gradle Plugin and Kotlin
         classpath 'com.android.tools.build:gradle:8.8.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20"
     }
 }
 
