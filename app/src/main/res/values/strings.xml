@@ -31,8 +31,21 @@
   -->
 
 <resources>
-    <string name="app_name">OSD PineTime DFU</string>
+    <string name="app_name">OSD PineTime Updater</string>
+    <string name="app_title">OpenSeizureDetector PineTime Firmware Updater</string>
 
     <string name="dfu_channel_name">Progress</string>
     <string name="dfu_channel_description">DFU operation progress.</string>
+    <string name="app_description">This tool will download a PineTime firmware file from Open Seizure Detector and update a PineTime watch to use the new firmware.</string>
+    <string name="start_dfu">Start Update (DFU)</string>
+    <string name="select_firmware">Select Firmware</string>
+    <string name="select_ble_device">Select BLE Device</string>
+    <string name="waiting_for_device">Waiting for device...</string>
+    <string name="dfu_successful">DFU Successful!</string>
+    <string name="dfu_in_progress">DFU in progress</string>
+    <string name="dfu_error">DFU Error</string>
+    <string name="firmware">Firmware</string>
+    <string name="device">Device</string>
+    <string name="downloading_firmware">Downloading firmware</string>
+    <string name="notification_permission_error">Notification permission is required to run the DFU process.</string>
 </resources>

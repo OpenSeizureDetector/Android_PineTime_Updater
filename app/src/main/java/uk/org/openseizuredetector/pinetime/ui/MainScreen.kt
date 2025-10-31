@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -92,15 +93,23 @@ fun MainScreen() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Added descriptive text below the app bar
+                Text(
+                    text = stringResource(R.string.app_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
                 Button(onClick = {
                     firmwareViewModel.fetchFirmwareIndex()
                     showFirmwareDialog = true
                 }) {
-                    Text(text = "Select Firmware")
+                    Text(text = stringResource(R.string.select_firmware))
                 }
 
                 Button(onClick = { showScanner = true }) {
-                    Text(text = "Select BLE Device")
+                    Text(text = stringResource(R.string.select_ble_device))
                 }
 
                 val canStartDfu = firmwareUri != null &&
@@ -113,14 +122,14 @@ fun MainScreen() {
                     },
                     enabled = canStartDfu
                 ) {
-                    Text(text = "Start DFU")
+                    Text(text = stringResource(R.string.start_dfu))
                 }
 
                 // Dynamic status text area
                 val statusText = when {
-                    firmwareUri == null && selectedDevice == null -> "Select firmware and device"
-                    firmwareUri == null -> "Select firmware"
-                    selectedDevice == null -> "Select device"
+                    firmwareUri == null && selectedDevice == null -> stringResource(R.string.select_firmware) + " & " + stringResource(R.string.select_ble_device)
+                    firmwareUri == null -> stringResource(R.string.select_firmware)
+                    selectedDevice == null -> stringResource(R.string.select_ble_device)
                     else -> "Ready to start"
                 }
 
@@ -129,28 +138,28 @@ fun MainScreen() {
                 // DFU Status Display
                 when (val state = dfuState) {
                     is DfuUiState.Waiting -> {
-                        Text(text = "Waiting for device...")
+                        Text(text = stringResource(R.string.waiting_for_device))
                         CircularProgressIndicator()
                     }
                     is DfuUiState.InProgress -> {
                         LinearProgressIndicator(progress = state.progress / 100f)
-                        Text(text = "DFU in progress: ${state.progress}%")
+                        Text(text = stringResource(R.string.dfu_in_progress) + ": ${state.progress}%")
                     }
                     is DfuUiState.Success -> {
-                        Text(text = "DFU Successful!")
+                        Text(text = stringResource(R.string.dfu_successful))
                     }
                     is DfuUiState.Error -> {
-                        Text(text = "DFU Error: ${state.message}")
+                        Text(text = stringResource(R.string.dfu_error) + ": ${state.message}")
                     }
                     is DfuUiState.Idle -> {
                         // In Idle state, show the selection status
                         Text(text = statusText)
                         // Also show the selected file and device
                         firmwareUri?.let {
-                            Text(text = "Firmware: ${it.lastPathSegment}")
+                            Text(text = stringResource(R.string.firmware) + ": ${it.lastPathSegment}")
                         }
                         selectedDevice?.let {
-                            Text(text = "Device: $it")
+                            Text(text = stringResource(R.string.device) + ": $it")
                         }
                     }
                 }
@@ -158,11 +167,11 @@ fun MainScreen() {
                 // Download progress is shown separately and is always visible when downloading
                 if (downloadState is DownloadState.Downloading) {
                     LinearProgressIndicator(progress = downloadState.progress / 100f)
-                    Text(text = "Downloading firmware: ${downloadState.progress}%")
+                    Text(text = stringResource(R.string.downloading_firmware) + ": ${downloadState.progress}%")
                 }
 
                 if (postNotificationPermission?.status?.isGranted == false) {
-                    Text("Notification permission is required to run the DFU process.")
+                    Text(stringResource(R.string.notification_permission_error))
                 }
             }
         }
@@ -200,10 +209,11 @@ private fun FirmwareDialog(
                                 fontWeight = fontWeight,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { 
+                                    .clickable {
                                         onFirmwareSelected(release)
                                         onDismiss()
-                                    }.padding(vertical = 8.dp)
+                                    }
+                                    .padding(vertical = 8.dp)
                             )
                         }
                     }

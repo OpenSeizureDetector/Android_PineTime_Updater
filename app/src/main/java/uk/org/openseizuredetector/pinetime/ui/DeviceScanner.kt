@@ -1,6 +1,7 @@
 package uk.org.openseizuredetector.pinetime.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,7 +9,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,6 +20,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import uk.org.openseizuredetector.pinetime.viewmodel.DeviceScannerViewModel
 
+@SuppressLint("MissingPermission") // Permissions are handled by the Accompanist library.
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun DeviceScanner(
@@ -57,8 +61,14 @@ fun DeviceScanner(
             Text(text = "Scanning for devices...")
             LazyColumn {
                 items(devices) { device ->
-                    // Display device name if available, otherwise the address
-                    val displayName = device.device.name ?: device.device.address
+                    // Format the display name to include the MAC address.
+                    val name = device.device.name
+                    val address = device.device.address
+                    val displayName = if (name.isNullOrEmpty()) {
+                        address
+                    } else {
+                        "$name ($address)"
+                    }
                     Text(
                         text = displayName,
                         modifier = Modifier
