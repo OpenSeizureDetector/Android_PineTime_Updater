@@ -13,6 +13,7 @@ if (gradle.startParameter.taskRequests.toString().contains("Release")) {
 android {
     namespace = "uk.org.openseizuredetector.pinetime"
     defaultConfig {
+        minSdk = 23
     }
     androidResources {
         localeFilters += setOf("en")
@@ -20,17 +21,10 @@ android {
 }
 
 dependencies {
-    implementation(project(":lib:analytics"))
-    implementation(project(":lib:storage")) // Deep link support
-    implementation(project(":profile:navigation"))
-
-    implementation(nordic.theme)
-    implementation(nordic.navigation)
-
-    // Use native Android BLE client.
-    // This can be switched to mock client for testing purposes (not implemented yet).
-    // See CentralManagerModule.kt in :app module.
-    implementation(nordic.blek.client.android)
+    implementation(project(":lib:dfu"))
 
     implementation(libs.androidx.activity.compose)
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 }
