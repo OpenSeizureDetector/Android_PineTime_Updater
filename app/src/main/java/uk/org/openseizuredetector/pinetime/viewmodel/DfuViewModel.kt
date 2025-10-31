@@ -14,6 +14,7 @@ import javax.inject.Inject
 
 sealed class DfuUiState {
     object Idle : DfuUiState()
+    object Waiting : DfuUiState() // New state for immediate feedback
     data class InProgress(val progress: Int) : DfuUiState()
     object Success : DfuUiState()
     data class Error(val message: String) : DfuUiState()
@@ -59,17 +60,21 @@ class DfuViewModel @Inject constructor(
     }
 
     fun startDfu(deviceAddress: String, firmwareUri: Uri) {
+        // Set state to Waiting immediately
+        _dfuState.value = DfuUiState.Waiting
+
         val initiator = DfuServiceInitiator(deviceAddress)
-            .setDeviceName("PineTime") // You might want to make this dynamic
+            .setDeviceName("PineTime")
             .setKeepBond(true)
             .setZip(firmwareUri)
-            // Disable MTU request to prevent GATT timeouts on some devices.
             .setMtu(0)
-            // This is required for many devices to switch to bootloader mode.
             .setUnsafeExperimentalButtonlessServiceInSecureDfuEnabled(true)
-            // Enable and set a conservative value for PRNs to make the DFU process more reliable.
             .setPacketsReceiptNotificationsEnabled(true)
             .setPacketsReceiptNotificationsValue(10)
         initiator.start(context, DfuService::class.java)
+    }
+
+    fun resetDfuState() {
+        _dfuState.value = DfuUiState.Idle
     }
 }

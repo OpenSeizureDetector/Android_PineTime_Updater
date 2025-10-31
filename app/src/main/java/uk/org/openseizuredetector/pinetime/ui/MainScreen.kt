@@ -25,7 +25,7 @@ import uk.org.openseizuredetector.pinetime.viewmodel.*
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MainScreen() {
-    var firmwareUri by remember { mutableStateOf<Uri?>(null) }
+    // The UI now only needs to manage the selected device address and dialog visibility.
     var selectedDevice by remember { mutableStateOf<String?>(null) }
     var showScanner by remember { mutableStateOf(false) }
     var showFirmwareDialog by remember { mutableStateOf(false) }
@@ -36,6 +36,18 @@ fun MainScreen() {
     val firmwareViewModel: FirmwareViewModel = hiltViewModel()
     val firmwareState = firmwareViewModel.firmwareState.collectAsState().value
     val downloadState = firmwareViewModel.downloadState.collectAsState().value
+    // The firmware URI is now sourced directly from the ViewModel.
+    val firmwareUri by firmwareViewModel.downloadedUri.collectAsState()
+
+    // Reset DFU state if a new firmware is selected (by observing the URI)
+    LaunchedEffect(firmwareUri) {
+        dfuViewModel.resetDfuState()
+    }
+
+    // Reset DFU state if a new device is selected
+    LaunchedEffect(selectedDevice) {
+        dfuViewModel.resetDfuState()
+    }
 
     val postNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
@@ -87,27 +99,8 @@ fun MainScreen() {
                     Text(text = "Select Firmware")
                 }
 
-                LaunchedEffect(downloadState) {
-                    if (downloadState is DownloadState.Finished) {
-                        firmwareUri = downloadState.uri
-                    }
-                }
-
-                if (downloadState is DownloadState.Downloading) {
-                    LinearProgressIndicator(progress = downloadState.progress / 100f)
-                    Text(text = "Downloading firmware: ${downloadState.progress}%")
-                }
-
-                firmwareUri?.let {
-                    Text(text = "Selected file: ${it.path}")
-                }
-
-                Button(onClick = { showScanner = true }, enabled = firmwareUri != null) {
+                Button(onClick = { showScanner = true }) {
                     Text(text = "Select BLE Device")
-                }
-
-                selectedDevice?.let {
-                    Text(text = "Selected device: $it")
                 }
 
                 val canStartDfu = firmwareUri != null &&
@@ -123,22 +116,53 @@ fun MainScreen() {
                     Text(text = "Start DFU")
                 }
 
-                if (postNotificationPermission?.status?.isGranted == false) {
-                    Text("Notification permission is required to run the DFU process.")
+                // Dynamic status text area
+                val statusText = when {
+                    firmwareUri == null && selectedDevice == null -> "Select firmware and device"
+                    firmwareUri == null -> "Select firmware"
+                    selectedDevice == null -> "Select device"
+                    else -> "Ready to start"
                 }
 
-                when (dfuState) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // DFU Status Display
+                when (val state = dfuState) {
+                    is DfuUiState.Waiting -> {
+                        Text(text = "Waiting for device...")
+                        CircularProgressIndicator()
+                    }
                     is DfuUiState.InProgress -> {
-                        LinearProgressIndicator(progress = dfuState.progress / 100f)
-                        Text(text = "DFU in progress: ${dfuState.progress}%")
+                        LinearProgressIndicator(progress = state.progress / 100f)
+                        Text(text = "DFU in progress: ${state.progress}%")
                     }
                     is DfuUiState.Success -> {
                         Text(text = "DFU Successful!")
                     }
                     is DfuUiState.Error -> {
-                        Text(text = "DFU Error: ${dfuState.message}")
+                        Text(text = "DFU Error: ${state.message}")
                     }
-                    else -> {}
+                    is DfuUiState.Idle -> {
+                        // In Idle state, show the selection status
+                        Text(text = statusText)
+                        // Also show the selected file and device
+                        firmwareUri?.let {
+                            Text(text = "Firmware: ${it.lastPathSegment}")
+                        }
+                        selectedDevice?.let {
+                            Text(text = "Device: $it")
+                        }
+                    }
+                }
+
+                // Download progress is shown separately and is always visible when downloading
+                if (downloadState is DownloadState.Downloading) {
+                    LinearProgressIndicator(progress = downloadState.progress / 100f)
+                    Text(text = "Downloading firmware: ${downloadState.progress}%")
+                }
+
+                if (postNotificationPermission?.status?.isGranted == false) {
+                    Text("Notification permission is required to run the DFU process.")
                 }
             }
         }
@@ -174,10 +198,12 @@ private fun FirmwareDialog(
                             Text(
                                 text = text,
                                 fontWeight = fontWeight,
-                                modifier = Modifier.clickable { 
-                                    onFirmwareSelected(release)
-                                    onDismiss()
-                                 }.padding(vertical = 8.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        onFirmwareSelected(release)
+                                        onDismiss()
+                                    }.padding(vertical = 8.dp)
                             )
                         }
                     }
@@ -188,7 +214,7 @@ private fun FirmwareDialog(
                 else -> {}
             }
         },
-        confirmButton = {            
+        confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }

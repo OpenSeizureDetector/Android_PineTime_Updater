@@ -19,7 +19,6 @@ import javax.inject.Inject
 sealed class FirmwareUiState {
     object Idle : FirmwareUiState()
     object Loading : FirmwareUiState()
-    // This now holds the entire index object.
     data class Success(val index: FirmwareIndex) : FirmwareUiState()
     data class Error(val message: String) : FirmwareUiState()
 }
@@ -27,7 +26,7 @@ sealed class FirmwareUiState {
 sealed class DownloadState {
     object Idle : DownloadState()
     data class Downloading(val progress: Int) : DownloadState()
-    data class Finished(val uri: Uri) : DownloadState()
+    // Finished state is no longer needed, as the URI is now part of the main state.
     data class Error(val message: String) : DownloadState()
 }
 
@@ -43,12 +42,18 @@ class FirmwareViewModel @Inject constructor(
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState = _downloadState.asStateFlow()
 
+    // Expose the downloaded URI as a state.
+    private val _downloadedUri = MutableStateFlow<Uri?>(null)
+    val downloadedUri = _downloadedUri.asStateFlow()
+
     fun fetchFirmwareIndex() {
+        // Reset states when starting a new fetch
+        _downloadedUri.value = null
+        _downloadState.value = DownloadState.Idle
         viewModelScope.launch {
             _firmwareState.value = FirmwareUiState.Loading
             try {
                 val index = service.getIndex()
-                // Pass the entire index object to the Success state.
                 _firmwareState.value = FirmwareUiState.Success(index)
             } catch (e: Exception) {
                 _firmwareState.value = FirmwareUiState.Error(e.message ?: "Unknown error")
@@ -81,7 +86,10 @@ class FirmwareViewModel @Inject constructor(
                             }
                         }
                     }
-                    _downloadState.value = DownloadState.Finished(Uri.fromFile(file))
+                    // Update the dedicated URI state.
+                    _downloadedUri.value = Uri.fromFile(file)
+                    // Set download to idle once finished.
+                    _downloadState.value = DownloadState.Idle 
                 } else {
                     _downloadState.value = DownloadState.Error("Download failed")
                 }
