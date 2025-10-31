@@ -127,10 +127,10 @@ fun MainScreen() {
 
                 // Dynamic status text area
                 val statusText = when {
-                    firmwareUri == null && selectedDevice == null -> stringResource(R.string.select_firmware) + " & " + stringResource(R.string.select_ble_device)
-                    firmwareUri == null -> stringResource(R.string.select_firmware)
-                    selectedDevice == null -> stringResource(R.string.select_ble_device)
-                    else -> "Ready to start"
+                    firmwareUri == null && selectedDevice == null -> stringResource(R.string.status_select_both)
+                    firmwareUri == null -> stringResource(R.string.status_select_firmware)
+                    selectedDevice == null -> stringResource(R.string.status_select_device)
+                    else -> stringResource(R.string.status_ready)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -143,23 +143,23 @@ fun MainScreen() {
                     }
                     is DfuUiState.InProgress -> {
                         LinearProgressIndicator(progress = state.progress / 100f)
-                        Text(text = stringResource(R.string.dfu_in_progress) + ": ${state.progress}%")
+                        Text(text = "${stringResource(R.string.dfu_in_progress)}: ${state.progress}%")
                     }
                     is DfuUiState.Success -> {
                         Text(text = stringResource(R.string.dfu_successful))
                     }
                     is DfuUiState.Error -> {
-                        Text(text = stringResource(R.string.dfu_error) + ": ${state.message}")
+                        Text(text = "${stringResource(R.string.dfu_error)}: ${state.message}")
                     }
                     is DfuUiState.Idle -> {
                         // In Idle state, show the selection status
                         Text(text = statusText)
                         // Also show the selected file and device
                         firmwareUri?.let {
-                            Text(text = stringResource(R.string.firmware) + ": ${it.lastPathSegment}")
+                            Text(text = "${stringResource(R.string.firmware)}: ${it.lastPathSegment}")
                         }
                         selectedDevice?.let {
-                            Text(text = stringResource(R.string.device) + ": $it")
+                            Text(text = "${stringResource(R.string.device)}: $it")
                         }
                     }
                 }
@@ -167,7 +167,7 @@ fun MainScreen() {
                 // Download progress is shown separately and is always visible when downloading
                 if (downloadState is DownloadState.Downloading) {
                     LinearProgressIndicator(progress = downloadState.progress / 100f)
-                    Text(text = stringResource(R.string.downloading_firmware) + ": ${downloadState.progress}%")
+                    Text(text = "${stringResource(R.string.downloading_firmware)}: ${downloadState.progress}%")
                 }
 
                 if (postNotificationPermission?.status?.isGranted == false) {
@@ -186,7 +186,7 @@ private fun FirmwareDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Firmware") },
+        title = { Text(stringResource(R.string.dialog_title_select_firmware)) },
         text = {
             when (firmwareState) {
                 is FirmwareUiState.Loading -> {
@@ -198,18 +198,15 @@ private fun FirmwareDialog(
                         itemsIndexed(firmwareState.index.releases) { index, release ->
                             val isRecommended = index == recommendedIndex
                             val fontWeight = if (isRecommended) FontWeight.Bold else FontWeight.Normal
-                            val text = if (isRecommended) {
-                                "${release.version}: ${release.description} (Recommended)"
-                            } else {
-                                "${release.version}: ${release.description}"
-                            }
+                            val recommendedText = if (isRecommended) " ${stringResource(R.string.recommended)}" else ""
+                            val text = "${release.version}: ${release.description}$recommendedText"
 
                             Text(
                                 text = text,
                                 fontWeight = fontWeight,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
+                                    .clickable { 
                                         onFirmwareSelected(release)
                                         onDismiss()
                                     }
@@ -224,9 +221,9 @@ private fun FirmwareDialog(
                 else -> {}
             }
         },
-        confirmButton = {
+        confirmButton = {            
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
