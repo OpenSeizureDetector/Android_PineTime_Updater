@@ -36,15 +36,15 @@
     <!-- Menu / About -->
     <string name="more_options">More options</string>
     <string name="menu_about">About</string>
-    <string name="about_title">About OSD PineTime DFU</string>
+    <string name="about_title">About OSD PineTime Updater</string>
     <string name="action_ok">OK</string>
-    <string name="about_app_description">This app downloads PineTime firmware provided by OpenSeizureDetector and performs a DFU update on a PineTime watch.</string>
+    <string name="about_app_description">This app downloads the firmware for a PineTime watch that is provided by OpenSeizureDetector and uploads it onto a PineTime watch.   It is also possible to re-load the standard InfiniTime firmware using this app.</string>
     <string name="about_credits_intro">Credits:</string>
     <string name="about_credits_libraries">Uses: Retrofit, kotlinx-serialization, OkHttp, Hilt, Accompanist (permissions), AndroidX libraries, and Nordic DFU library.</string>
-    <string name="about_credits_authors">Special thanks to Graham Jones and the OpenSeizureDetector project contributors.</string>
+    <string name="about_credits_authors">Copyright Graham Jones, 2025.</string>
     <string name="about_license_note">View project license and attributions on GitHub:</string>
     <string name="about_license_link_text">Open LICENSE</string>
     <!-- Assumption: repository contains LICENSE.md at root; link points to that file in the GitHub repository. -->
-    <string name="license_url">https://github.com/OpenSeizureDetector/Android_PineTime_Updater/blob/main/LICENSE.md</string>
+    <string name="license_url">https://github.com/OpenSeizureDetector/Android_PineTime_Updater/blob/main/README.md</string>
 
 </resources>

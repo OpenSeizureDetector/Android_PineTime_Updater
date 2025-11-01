@@ -14,6 +14,8 @@ android {
     namespace = "uk.org.openseizuredetector.pinetime"
     defaultConfig {
         minSdk = 23
+        versionCode = (project.findProperty("VERSION_CODE") as? String)?.toInt() ?: 1
+        versionName = project.findProperty("VERSION_NAME") as? String ?: "0.1.0"
     }
     androidResources {
         localeFilters += setOf("en")
