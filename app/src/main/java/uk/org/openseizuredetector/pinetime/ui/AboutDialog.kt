@@ -45,7 +45,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         text = {
             Column(modifier = Modifier.padding(top = 4.dp)) {
                 Text(
-                    text = "$appName v$versionCode",
+                    text = "$appName v$versionName ($versionCode)",
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))

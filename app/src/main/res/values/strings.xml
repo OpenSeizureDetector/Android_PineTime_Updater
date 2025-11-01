@@ -42,8 +42,8 @@
     <string name="about_credits_intro">Credits:</string>
     <string name="about_credits_libraries">Uses: Retrofit, kotlinx-serialization, OkHttp, Hilt, Accompanist (permissions), AndroidX libraries, and Nordic DFU library.</string>
     <string name="about_credits_authors">Copyright Graham Jones, 2025.</string>
-    <string name="about_license_note">View project license and attributions on GitHub:</string>
-    <string name="about_license_link_text">Open LICENSE</string>
+    <string name="about_license_note">View project license and attributions on the GitHub README file:</string>
+    <string name="about_license_link_text">Open README</string>
     <!-- Assumption: repository contains LICENSE.md at root; link points to that file in the GitHub repository. -->
     <string name="license_url">https://github.com/OpenSeizureDetector/Android_PineTime_Updater/blob/main/README.md</string>
 

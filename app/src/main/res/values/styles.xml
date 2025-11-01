@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- App theme that disables the platform ActionBar so Compose TopAppBar is the single app bar. -->
-    <style name="Theme.PineTime" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Keep window background transparent so Compose can draw edge-to-edge as Theme.kt expects -->
-        <item name="android:windowBackground">@android:color/transparent</item>
-    </style>
-</resources>
