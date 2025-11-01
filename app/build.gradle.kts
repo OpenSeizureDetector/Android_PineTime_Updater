@@ -1,49 +1,93 @@
-// NOTE:  sdks and version names read from gradle.properties
-
 plugins {
-    alias(libs.plugins.nordic.application.compose)
-    alias(libs.plugins.nordic.hilt)
-    // Add the Kotlinx Serialization plugin
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
-}
-
-if (gradle.startParameter.taskRequests.toString().contains("Release")) {
-    apply(plugin = "com.google.gms.google-services")
-    apply(plugin = "com.google.firebase.crashlytics")
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
 }
 
 android {
-    compileSdk = (project.findProperty("COMPILE_SDK") as? String)?.toInt() ?: 34
-
     namespace = "uk.org.openseizuredetector.pinetime"
-    defaultConfig {
-        //minSdk = 23
-        minSdk = (project.findProperty("MIN_SDK") as? String)?.toInt() ?: 23
-        targetSdk = (project.findProperty("TARGET_SDK") as? String)?.toInt() ?: 34
 
-        versionCode = (project.findProperty("VERSION_CODE") as? String)?.toInt() ?: 1
-        versionName = project.findProperty("VERSION_NAME") as? String ?: "0.1.0"
+    compileSdk = (project.findProperty("COMPILE_SDK") as String?)?.toInt() ?: 34
+
+    defaultConfig {
+        applicationId = "uk.org.openseizuredetector.pinetime"
+        minSdk = (project.findProperty("MIN_SDK") as String?)?.toInt() ?: 23
+        targetSdk = (project.findProperty("TARGET_SDK") as String?)?.toInt() ?: 34
+        versionCode = (project.findProperty("VERSION_CODE") as String?)?.toInt() ?: 1
+        versionName = (project.findProperty("VERSION_NAME") as String?) ?: "1.0.0"
+
+        resourceConfigurations += listOf("en")
     }
-    androidResources {
-        localeFilters += setOf("en")
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+// This block forces all dependencies to use the same, consistent Kotlin version.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
     }
 }
 
 dependencies {
-    implementation(project(":lib:dfu"))
+    val dfuVersion = (project.findProperty("DFU_VERSION") as String?) ?: "2.6.1"
+    implementation("no.nordicsemi.android:dfu:$dfuVersion")
 
-    implementation(libs.androidx.activity.compose)
-    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
-    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
 
-    // Dependencies for Networking and JSON Parsing
-    implementation("com.squareup.retrofit2:retrofit:3.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
-    implementation("com.squareup.okhttp3:okhttp:5.3.0")
-    // Use the official converter
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.material3:material3")
+
+    // Hilt
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    ksp("com.google.dagger:hilt-compiler:2.51.1")
+    // Add the missing dependency for hiltViewModel()
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    // Lifecycle - ViewModel for Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+
+    // Accompanist
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
+    // Material Components (for Views, if used)
+    implementation("com.google.android.material:material:1.12.0")
+
+    // Networking and JSON
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // Add Material Components for theme resolution
-    implementation("com.google.android.material:material:1.11.0")
+    // AndroidX
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 }

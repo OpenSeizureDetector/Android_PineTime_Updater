@@ -1,59 +1,25 @@
-@Suppress("UnstableApiUsage")
+// This file configures which modules are included in the build and where to find their dependencies.
+
+// Configures where Gradle should look for plugins.
 pluginManagement {
     repositories {
-        mavenLocal()
-        google {
-            content {
-                includeGroupAndSubgroups("com.android")
-                includeGroupAndSubgroups("com.google")
-                includeGroupAndSubgroups("androidx")
-            }
-        }
-        gradlePluginPortal {
-            content {
-                includeGroupAndSubgroups("com.gradle")
-                includeGroupAndSubgroups("no.nordicsemi")
-                includeGroupAndSubgroups("org.jetbrains")
-            }
-        }
+        google()
         mavenCentral()
+        gradlePluginPortal()
     }
 }
 
+// Configures where Gradle should look for all project dependencies.
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        mavenLocal()
-        google {
-            content {
-                includeGroupAndSubgroups("com.android")
-                includeGroupAndSubgroups("com.google")
-                includeGroupAndSubgroups("androidx")
-            }
-        }
+        // Standard repositories for Android projects
+        google()
         mavenCentral()
-    }
-    versionCatalogs {
-        // Use Nordic Gradle Version Catalog with common external libraries versions.
-        create("libs") {
-            from("no.nordicsemi.android.gradle:version-catalog:2.10-4")
-        }
-        // Fixed versions for Nordic libraries.
-        create("nordic") {
-            from(files("gradle/nordic.versions.toml"))
-        }
-        // Nordic Version Catalog is released after library releases, so cannot be used internally in libs.
-        // create("nordic") {
-        //    from("no.nordicsemi.android:version-catalog:2025.10.00")
-        // }
     }
 }
 
 rootProject.name = "OSD PineTime DFU"
-
+// Include only the main application module in the build.
 include(":app")
-include(":lib:analytics")
-include(":lib:dfu")
-include(":lib:storage")
-include(":lib:settings")
