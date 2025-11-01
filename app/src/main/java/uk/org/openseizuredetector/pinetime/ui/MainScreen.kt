@@ -1,13 +1,14 @@
 package uk.org.openseizuredetector.pinetime.ui
 
 import android.Manifest
-import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ fun MainScreen() {
     var selectedDevice by remember { mutableStateOf<String?>(null) }
     var showScanner by remember { mutableStateOf(false) }
     var showFirmwareDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     val dfuViewModel: DfuViewModel = hiltViewModel()
     val dfuState = dfuViewModel.dfuState.collectAsState().value
@@ -72,9 +74,33 @@ fun MainScreen() {
         )
     }
 
+    if (showAboutDialog) {
+        AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(id = R.string.app_name)) })
+            TopAppBar(
+                title = { Text(stringResource(id = R.string.app_name)) },
+                actions = {
+                    // Simple overflow menu with About only
+                    var expanded by remember { mutableStateOf(false) }
+                    val moreOptionsDesc = stringResource(R.string.more_options)
+                    IconButton(onClick = { expanded = true }) {
+                        // use a simple vertical ellipsis character as overflow icon
+                        Text(
+                            text = "⋮",
+                            modifier = Modifier.semantics { contentDescription = moreOptionsDesc }
+                        )
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.menu_about)) }, onClick = {
+                            expanded = false
+                            showAboutDialog = true
+                        })
+                    }
+                }
+            )
         }
     ) { paddingValues ->
         if (showScanner) {
@@ -206,7 +232,7 @@ private fun FirmwareDialog(
                                 fontWeight = fontWeight,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { 
+                                    .clickable {
                                         onFirmwareSelected(release)
                                         onDismiss()
                                     }
@@ -221,7 +247,7 @@ private fun FirmwareDialog(
                 else -> {}
             }
         },
-        confirmButton = {            
+        confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
