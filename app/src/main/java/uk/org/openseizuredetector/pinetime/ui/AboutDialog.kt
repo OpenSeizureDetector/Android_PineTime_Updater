@@ -1,5 +1,6 @@
 package uk.org.openseizuredetector.pinetime.ui
 
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -14,10 +15,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import uk.org.openseizuredetector.pinetime.BuildConfig
 import uk.org.openseizuredetector.pinetime.R
 
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
+    val TAG = "AboutDialog"
     val uriHandler = LocalUriHandler.current
 
     // Read string resources into vals so they can be used from non-composable lambdas
@@ -31,6 +34,10 @@ fun AboutDialog(onDismiss: () -> Unit) {
     val okText = stringResource(id = R.string.action_ok)
     val licenseLinkText = stringResource(id = R.string.about_license_link_text)
     val licenseUrl = stringResource(id = R.string.license_url)
+    val versionName = BuildConfig.VERSION_NAME
+    val versionCode = BuildConfig.VERSION_CODE
+
+    Log.d(TAG,BuildConfig.APPLICATION_ID + " " + BuildConfig.BUILD_TYPE + " " + BuildConfig.VERSION_NAME + " " + BuildConfig.VERSION_CODE)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -38,7 +45,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         text = {
             Column(modifier = Modifier.padding(top = 4.dp)) {
                 Text(
-                    text = appName,
+                    text = "$appName v$versionCode",
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
