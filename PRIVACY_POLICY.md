@@ -41,4 +41,4 @@ This privacy policy may be updated from time to time. We will notify you of any 
 
 ### Contact Us
 
-If you have any questions regarding privacy while using the Application, or have questions about our practices, please contact us via email at [Your Contact Email Here].
+If you have any questions regarding privacy while using the Application, or have questions about our practices, please contact us via email at [graham@openseizuredetector.org.uk].
