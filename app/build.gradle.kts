@@ -1,3 +1,5 @@
+// NOTE:  sdks and version names read from gradle.properties
+
 plugins {
     alias(libs.plugins.nordic.application.compose)
     alias(libs.plugins.nordic.hilt)
@@ -11,9 +13,14 @@ if (gradle.startParameter.taskRequests.toString().contains("Release")) {
 }
 
 android {
+    compileSdk = (project.findProperty("COMPILE_SDK") as? String)?.toInt() ?: 34
+
     namespace = "uk.org.openseizuredetector.pinetime"
     defaultConfig {
-        minSdk = 23
+        //minSdk = 23
+        minSdk = (project.findProperty("MIN_SDK") as? String)?.toInt() ?: 23
+        targetSdk = (project.findProperty("TARGET_SDK") as? String)?.toInt() ?: 34
+
         versionCode = (project.findProperty("VERSION_CODE") as? String)?.toInt() ?: 1
         versionName = project.findProperty("VERSION_NAME") as? String ?: "0.1.0"
     }
