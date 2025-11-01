@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OSD PineTime DFU</string>
+    <string name="app_name">OSD PineTime Updater</string>
 
     <!-- DFU Service -->
     <string name="dfu_channel_name">Progress</string>
