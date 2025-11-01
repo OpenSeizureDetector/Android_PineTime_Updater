@@ -46,5 +46,6 @@
     <string name="about_license_link_text">Open README</string>
     <!-- Assumption: repository contains LICENSE.md at root; link points to that file in the GitHub repository. -->
     <string name="license_url">https://github.com/OpenSeizureDetector/Android_PineTime_Updater/blob/main/README.md</string>
+    <string name="osd_logo_content_description">OSD Star-of-Life logo</string>
 
 </resources>

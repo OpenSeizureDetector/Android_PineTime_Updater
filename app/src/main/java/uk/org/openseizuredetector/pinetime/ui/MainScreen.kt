@@ -2,6 +2,7 @@ package uk.org.openseizuredetector.pinetime.ui
 
 import android.Manifest
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -81,7 +83,22 @@ fun MainScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(id = R.string.app_name)) },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.star_of_life_48x48),
+                            contentDescription = stringResource(R.string.osd_logo_content_description),
+                            modifier = Modifier
+                                .size(32.dp) // Adjust size as needed
+                                .padding(end = 8.dp)
+                            )
+                            Text(stringResource(id = R.string.app_name))
+                    }
+                        },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
                 actions = {
                     // Simple overflow menu with About only
                     var expanded by remember { mutableStateOf(false) }
@@ -90,6 +107,11 @@ fun MainScreen() {
                         // use a simple vertical ellipsis character as overflow icon
                         Text(
                             text = "⋮",
+                            // Set the color to be the same as the title color
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            // Make the icon a bit larger and bolder to improve visibility
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
                             modifier = Modifier.semantics { contentDescription = moreOptionsDesc }
                         )
                     }
