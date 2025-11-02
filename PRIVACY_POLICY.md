@@ -1,8 +1,8 @@
-# Privacy Policy for OSD PineTime DFU
+# Privacy Policy for OSD PineTime Firmware Updater
 
 **Last Updated:** 2024-10-31
 
-This privacy policy governs your use of the software application "OSD PineTime DFU" (the "Application") for mobile devices.
+This privacy policy governs your use of the software application "OSD PineTime Firmware Updater" (the "Application") for mobile devices.
 
 ### Information We Do Not Collect
 
@@ -37,8 +37,8 @@ To perform its core function of updating a PineTime watch, the Application requi
 
 ### Changes to This Privacy Policy
 
-This privacy policy may be updated from time to time. We will notify you of any changes by posting the new privacy policy within the Application's store listing. You are advised to consult this privacy policy regularly for any changes.
+This privacy policy may be updated from time to time. We will notify you of any changes by posting the new privacy policy within the Application's Play Store listing and on this web page. You are advised to consult this privacy policy regularly for any changes.
 
 ### Contact Us
 
-If you have any questions regarding privacy while using the Application, or have questions about our practices, please contact us via email at [graham@openseizuredetector.org.uk].
+If you have any questions regarding privacy while using the Application, or have questions about our practices, please contact us via email at graham@openseizuredetector.org.uk.
