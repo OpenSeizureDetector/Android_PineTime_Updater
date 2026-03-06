@@ -44,12 +44,23 @@ class DeviceScannerViewModel @Inject constructor(
         }
     }
 
+    private var isScanning = false
+
     fun startScan() {
+        if (isScanning) return
+        _devices.value = emptyList()
         scanner?.startScan(scanCallback)
+        isScanning = true
+    }
+
+    fun stopScan() {
+        if (!isScanning) return
+        scanner?.stopScan(scanCallback)
+        isScanning = false
     }
 
     override fun onCleared() {
         super.onCleared()
-        scanner?.stopScan(scanCallback)
+        stopScan()
     }
 }

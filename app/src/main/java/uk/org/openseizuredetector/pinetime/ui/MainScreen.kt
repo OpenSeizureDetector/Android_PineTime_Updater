@@ -1,12 +1,14 @@
 package uk.org.openseizuredetector.pinetime.ui
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -15,11 +17,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import uk.org.openseizuredetector.pinetime.R
@@ -29,11 +40,19 @@ import uk.org.openseizuredetector.pinetime.viewmodel.*
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MainScreen() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     // The UI now only needs to manage the selected device address and dialog visibility.
     var selectedDevice by remember { mutableStateOf<String?>(null) }
-    var showScanner by remember { mutableStateOf(false) }
+    var showWatchDialog by remember { mutableStateOf(false) }
     var showFirmwareDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    var notificationPermissionDenied by remember { mutableStateOf(false) }
+    var hasRequestedNotificationPermission by remember { mutableStateOf(false) }
+    var permissionRequestInFlight by remember { mutableStateOf(false) }
+    var requestResultReceived by remember { mutableStateOf(false) }
 
     val dfuViewModel: DfuViewModel = hiltViewModel()
     val dfuState = dfuViewModel.dfuState.collectAsState().value
@@ -54,16 +73,39 @@ fun MainScreen() {
         dfuViewModel.resetDfuState()
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        hasRequestedNotificationPermission = true
+        requestResultReceived = true
+    }
+
     val postNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
     } else {
         null
     }
+    val isNotificationPermissionPermanentlyDenied =
+        hasRequestedNotificationPermission &&
+            (postNotificationPermission?.status as? PermissionStatus.Denied)?.shouldShowRationale == false
 
-    LaunchedEffect(postNotificationPermission) {
-        postNotificationPermission?.let {
-            if (!it.status.isGranted) {
-                it.launchPermissionRequest()
+    LaunchedEffect(requestResultReceived) {
+        if (requestResultReceived) {
+            lifecycleOwner.lifecycle.currentStateFlow.first { it == Lifecycle.State.RESUMED }
+            delay(100)
+            permissionRequestInFlight = false
+            requestResultReceived = false
+
+            if (postNotificationPermission?.status?.isGranted == true) {
+                notificationPermissionDenied = false
+                val device = selectedDevice
+                val firmware = firmwareUri
+                if (device != null && firmware != null) {
+                    dfuViewModel.startDfu(device, firmware)
+                }
+            } else {
+                notificationPermissionDenied = true
+                showNotificationPermissionDialog = true
             }
         }
     }
@@ -76,8 +118,65 @@ fun MainScreen() {
         )
     }
 
+    if (showWatchDialog) {
+        DeviceScanner(
+            onDismiss = { showWatchDialog = false },
+            onDeviceSelected = {
+                selectedDevice = it
+                showWatchDialog = false
+            }
+        )
+    }
+
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+
+    if (showNotificationPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotificationPermissionDialog = false },
+            title = { Text(stringResource(R.string.dialog_title_notification_permission)) },
+            text = {
+                Text(
+                    if (isNotificationPermissionPermanentlyDenied) {
+                        stringResource(R.string.notification_permission_rationale_settings)
+                    } else {
+                        stringResource(R.string.notification_permission_rationale)
+                    }
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (isNotificationPermissionPermanentlyDenied) {
+                            showNotificationPermissionDialog = false
+                            val settingsIntent = Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null)
+                            )
+                            context.startActivity(settingsIntent)
+                        } else {
+                            showNotificationPermissionDialog = false
+                            permissionRequestInFlight = true
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                ) {
+                    Text(
+                        if (isNotificationPermissionPermanentlyDenied) {
+                            stringResource(R.string.open_settings)
+                        } else {
+                            stringResource(R.string.action_grant_notifications)
+                        }
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNotificationPermissionDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -125,104 +224,180 @@ fun MainScreen() {
             )
         }
     ) { paddingValues ->
-        if (showScanner) {
-            Column(modifier = Modifier.padding(paddingValues)) {
-                DeviceScanner(onDeviceSelected = {
-                    selectedDevice = it
-                    showScanner = false
-                })
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Added descriptive text below the app bar
-                Text(
-                    text = stringResource(R.string.app_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+        val hasDfuPrerequisites = firmwareUri != null && selectedDevice != null
+        val canStartDfu = hasDfuPrerequisites
 
-                Button(onClick = {
-                    firmwareViewModel.fetchFirmwareIndex()
-                    showFirmwareDialog = true
-                }) {
-                    Text(text = stringResource(R.string.select_firmware))
-                }
+        val firmwareStatusText = when (val state = downloadState) {
+            is DownloadState.Downloading ->
+                "${stringResource(R.string.downloading_firmware)}: ${state.progress}%"
+            is DownloadState.Error ->
+                "${stringResource(R.string.download_error)}: ${state.message}"
+            else -> firmwareUri?.lastPathSegment?.let {
+                stringResource(R.string.status_selected_value, it)
+            } ?: stringResource(R.string.status_no_software_selected)
+        }
+        val firmwareHasTick = firmwareUri != null && downloadState !is DownloadState.Error
 
-                Button(onClick = { showScanner = true }) {
-                    Text(text = stringResource(R.string.select_ble_device))
-                }
+        val deviceStatusText = selectedDevice?.let {
+            stringResource(R.string.status_selected_value, it)
+        } ?: stringResource(R.string.status_no_watch_selected)
+        val deviceHasTick = selectedDevice != null
 
-                val canStartDfu = firmwareUri != null &&
-                        selectedDevice != null &&
-                        (postNotificationPermission?.status?.isGranted ?: true)
-
-                Button(
-                    onClick = {
-                        dfuViewModel.startDfu(selectedDevice!!, firmwareUri!!)
-                    },
-                    enabled = canStartDfu
-                ) {
-                    Text(text = stringResource(R.string.start_dfu))
-                }
-
-                // Dynamic status text area
-                val statusText = when {
-                    firmwareUri == null && selectedDevice == null -> stringResource(R.string.status_select_both)
-                    firmwareUri == null -> stringResource(R.string.status_select_firmware)
-                    selectedDevice == null -> stringResource(R.string.status_select_device)
-                    else -> stringResource(R.string.status_ready)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // DFU Status Display
-                when (val state = dfuState) {
-                    is DfuUiState.Waiting -> {
-                        Text(text = stringResource(R.string.waiting_for_device))
-                        CircularProgressIndicator()
-                    }
-                    is DfuUiState.InProgress -> {
-                        LinearProgressIndicator(progress = state.progress / 100f)
-                        Text(text = "${stringResource(R.string.dfu_in_progress)}: ${state.progress}%")
-                    }
-                    is DfuUiState.Success -> {
-                        Text(text = stringResource(R.string.dfu_successful))
-                    }
-                    is DfuUiState.Error -> {
-                        Text(text = "${stringResource(R.string.dfu_error)}: ${state.message}")
-                    }
-                    is DfuUiState.Idle -> {
-                        // In Idle state, show the selection status
-                        Text(text = statusText)
-                        // Also show the selected file and device
-                        firmwareUri?.let {
-                            Text(text = "${stringResource(R.string.firmware)}: ${it.lastPathSegment}")
-                        }
-                        selectedDevice?.let {
-                            Text(text = "${stringResource(R.string.device)}: $it")
-                        }
-                    }
-                }
-
-                // Download progress is shown separately and is always visible when downloading
-                if (downloadState is DownloadState.Downloading) {
-                    LinearProgressIndicator(progress = downloadState.progress / 100f)
-                    Text(text = "${stringResource(R.string.downloading_firmware)}: ${downloadState.progress}%")
-                }
-
-                if (postNotificationPermission?.status?.isGranted == false) {
-                    Text(stringResource(R.string.notification_permission_error))
-                }
+        val installStatusText = when (val state = dfuState) {
+            is DfuUiState.Waiting -> stringResource(R.string.waiting_for_device)
+            is DfuUiState.InProgress ->
+                "${stringResource(R.string.dfu_in_progress)}: ${state.progress}%"
+            is DfuUiState.Success -> stringResource(R.string.dfu_successful)
+            is DfuUiState.Error ->
+                "${stringResource(R.string.dfu_error)}: ${state.message}"
+            is DfuUiState.Idle -> {
+                if (canStartDfu) stringResource(R.string.status_ready)
+                else stringResource(R.string.status_not_ready)
             }
         }
+        val installHasTick = dfuState is DfuUiState.Success ||
+            (dfuState is DfuUiState.Idle && canStartDfu)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Added descriptive text below the app bar
+            Text(
+                text = stringResource(R.string.app_description),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            ActionButtonRow(
+                buttonLabelRes = R.string.select_firmware,
+                statusText = firmwareStatusText,
+                showTick = firmwareHasTick,
+                onClick = {
+                    firmwareViewModel.fetchFirmwareIndex()
+                    showFirmwareDialog = true
+                }
+            )
+
+            ActionButtonRow(
+                buttonLabelRes = R.string.select_ble_device,
+                statusText = deviceStatusText,
+                showTick = deviceHasTick,
+                onClick = { showWatchDialog = true }
+            )
+
+            ActionButtonRow(
+                buttonLabelRes = R.string.start_dfu,
+                statusText = installStatusText,
+                showTick = installHasTick,
+                enabled = canStartDfu,
+                onClick = {
+                    val device = selectedDevice
+                    val firmware = firmwareUri
+                    if (device == null || firmware == null) return@ActionButtonRow
+
+                    if (postNotificationPermission == null || postNotificationPermission.status.isGranted) {
+                        notificationPermissionDenied = false
+                        dfuViewModel.startDfu(device, firmware)
+                    } else {
+                        showNotificationPermissionDialog = true
+                    }
+                }
+            )
+
+            if (notificationPermissionDenied && postNotificationPermission?.status?.isGranted == false) {
+                Text(stringResource(R.string.notification_permission_error))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionButtonRow(
+    buttonLabelRes: Int,
+    statusText: String,
+    showTick: Boolean,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    val isCompact = configuration.screenWidthDp < 400 || configuration.fontScale > 1.1f
+
+    if (isCompact) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(buttonLabelRes), textAlign = TextAlign.Center)
+            }
+
+            ActionStatusText(
+                text = statusText,
+                showTick = showTick,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            )
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(text = stringResource(buttonLabelRes), textAlign = TextAlign.Center)
+            }
+
+            ActionStatusText(
+                text = statusText,
+                showTick = showTick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionStatusText(
+    text: String,
+    showTick: Boolean,
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp)
+) {
+    val selectedIconDescription = stringResource(R.string.status_selected_icon_content_description)
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = horizontalArrangement,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (showTick) {
+            Text(
+                text = "✓",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics {
+                    contentDescription = selectedIconDescription
+                }
+            )
+        }
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -232,47 +407,72 @@ private fun FirmwareDialog(
     onDismiss: () -> Unit,
     onFirmwareSelected: (FirmwareRelease) -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dialog_title_select_firmware)) },
-        text = {
-            when (firmwareState) {
-                is FirmwareUiState.Loading -> {
-                    CircularProgressIndicator()
-                }
-                is FirmwareUiState.Success -> {
-                    val recommendedIndex = firmwareState.index.recommendedFw
-                    LazyColumn {
-                        itemsIndexed(firmwareState.index.releases) { index, release ->
-                            val isRecommended = index == recommendedIndex
-                            val fontWeight = if (isRecommended) FontWeight.Bold else FontWeight.Normal
-                            val recommendedText = if (isRecommended) " ${stringResource(R.string.recommended)}" else ""
-                            val text = "${release.version}: ${release.description}$recommendedText"
+    var selectedReleaseId by remember(firmwareState) { mutableStateOf<String?>(null) }
 
-                            Text(
-                                text = text,
-                                fontWeight = fontWeight,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onFirmwareSelected(release)
-                                        onDismiss()
-                                    }
-                                    .padding(vertical = 8.dp)
-                            )
-                        }
+    when (firmwareState) {
+        is FirmwareUiState.Loading -> {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(stringResource(R.string.dialog_title_select_firmware)) },
+                text = { CircularProgressIndicator() },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
-                is FirmwareUiState.Error -> {
-                    Text(firmwareState.message)
-                }
-                else -> {}
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            )
         }
-    )
+
+        is FirmwareUiState.Success -> {
+            val releasesById = firmwareState.index.releases.associateBy { it.fname }
+            val items = firmwareState.index.releases.mapIndexed { index, release ->
+                val isRecommended = index == firmwareState.index.recommendedFw
+                val supportingText = buildString {
+                    append(release.description)
+                    if (isRecommended) {
+                        append(" ")
+                        append(stringResource(R.string.recommended))
+                    }
+                }
+                SelectionDialogItem(
+                    id = release.fname,
+                    title = release.version,
+                    supportingText = supportingText
+                )
+            }
+
+            SingleChoiceSelectionDialog(
+                title = stringResource(R.string.dialog_title_select_firmware),
+                hint = stringResource(R.string.select_firmware_hint),
+                items = items,
+                selectedItemId = selectedReleaseId,
+                onItemSelected = { selectedReleaseId = it },
+                onDismiss = onDismiss,
+                onConfirm = {
+                    selectedReleaseId
+                        ?.let { releasesById[it] }
+                        ?.let(onFirmwareSelected)
+                    onDismiss()
+                },
+                confirmText = stringResource(R.string.action_select),
+                dismissText = stringResource(R.string.action_cancel),
+                confirmEnabled = selectedReleaseId != null
+            )
+        }
+
+        is FirmwareUiState.Error -> {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(stringResource(R.string.dialog_title_select_firmware)) },
+                text = { Text(firmwareState.message) },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.action_ok))
+                    }
+                }
+            )
+        }
+
+        else -> Unit
+    }
 }
