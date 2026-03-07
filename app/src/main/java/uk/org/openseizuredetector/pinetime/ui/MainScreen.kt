@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -33,6 +34,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import uk.org.openseizuredetector.pinetime.MainActivity
 import uk.org.openseizuredetector.pinetime.R
 import uk.org.openseizuredetector.pinetime.model.FirmwareRelease
 import uk.org.openseizuredetector.pinetime.viewmodel.*
@@ -124,6 +126,9 @@ fun MainScreen() {
             onDeviceSelected = {
                 selectedDevice = it
                 showWatchDialog = false
+                Log.d("MainScreen", "Device selected: $it. Attempting to set Activity result via MainActivity helper.")
+                (context as? MainActivity)?.setMacAddressResult(it)
+                    ?: Log.w("MainScreen", "Context is not MainActivity, cannot set result via helper")
             }
         )
     }
@@ -276,6 +281,13 @@ fun MainScreen() {
             )
 
             ActionButtonRow(
+                buttonLabelRes = R.string.select_ble_device,
+                statusText = deviceStatusText,
+                showTick = deviceHasTick,
+                onClick = { showWatchDialog = true }
+            )
+
+            ActionButtonRow(
                 buttonLabelRes = R.string.select_firmware,
                 statusText = firmwareStatusText,
                 showTick = firmwareHasTick,
@@ -283,13 +295,6 @@ fun MainScreen() {
                     firmwareViewModel.fetchFirmwareIndex()
                     showFirmwareDialog = true
                 }
-            )
-
-            ActionButtonRow(
-                buttonLabelRes = R.string.select_ble_device,
-                statusText = deviceStatusText,
-                showTick = deviceHasTick,
-                onClick = { showWatchDialog = true }
             )
 
             ActionButtonRow(
