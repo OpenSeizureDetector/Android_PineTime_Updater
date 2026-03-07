@@ -24,7 +24,7 @@
     <string name="status_selected_icon_content_description">Selected</string>
     <string name="waiting_for_device">Waiting for watch...</string>
     <string name="dfu_in_progress">Installation in progress</string>
-    <string name="dfu_successful">Installation Successful!</string>
+    <string name="dfu_successful">Installation Successful!\n\nUse the back (&lt;) button to close this app.</string>
     <string name="dfu_error">Installation Error</string>
     <string name="firmware">Software</string>
     <string name="device">Watch</string>
