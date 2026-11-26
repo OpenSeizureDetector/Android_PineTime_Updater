@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import dagger.hilt.android.AndroidEntryPoint
+import uk.org.openseizuredetector.pinetime.model.OsdLaunchRequest
 import uk.org.openseizuredetector.pinetime.ui.MainScreen
 import uk.org.openseizuredetector.pinetime.ui.theme.PineTimeTheme
 
@@ -21,12 +22,16 @@ class MainActivity : ComponentActivity() {
         Log.d("MainActivity", "onCreate: Instance=$this, CallingActivity=${callingActivity?.className}")
         Log.d("MainActivity", "onCreate: Intent Flags=0x${Integer.toHexString(intent.flags)}")
 
+        // Non-null only when started by the OpenSeizureDetector app's "Update Firmware?" prompt.
+        val osdRequest = OsdLaunchRequest.from(intent)
+        Log.d("MainActivity", "onCreate: osdRequest=$osdRequest")
+
         // This line enables edge-to-edge display.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             PineTimeTheme {
-                MainScreen()
+                MainScreen(osdRequest = osdRequest)
             }
         }
     }
