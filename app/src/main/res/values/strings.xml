@@ -51,6 +51,10 @@
     <string name="action_grant_notifications">Grant Notifications</string>
 
     <!-- Dialogs -->
+    <string name="osd_firmware_up_to_date">No newer recommended firmware available</string>
+    <string name="dialog_title_bluetooth_permission">Permission required</string>
+    <string name="permissions_required_to_update">To connect to your watch and install the firmware, this app needs the \"Nearby devices\" (and Location) permission.</string>
+    <string name="permissions_required_to_update_settings">The permission was denied. Please open the app settings and allow \"Nearby devices\" (and Location), then come back.</string>
     <string name="dialog_title_select_firmware">Select Software to Install</string>
     <string name="dialog_title_select_watch">Select PineTime Watch</string>
     <string name="action_select">Select</string>

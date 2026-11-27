@@ -33,20 +33,24 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import uk.org.openseizuredetector.pinetime.MainActivity
 import uk.org.openseizuredetector.pinetime.R
+import uk.org.openseizuredetector.pinetime.model.FirmwareIndex
 import uk.org.openseizuredetector.pinetime.model.FirmwareRelease
+import uk.org.openseizuredetector.pinetime.model.OsdFirmwareRules
+import uk.org.openseizuredetector.pinetime.model.OsdLaunchRequest
 import uk.org.openseizuredetector.pinetime.viewmodel.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(osdRequest: OsdLaunchRequest? = null) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // The UI now only needs to manage the selected device address and dialog visibility.
-    var selectedDevice by remember { mutableStateOf<String?>(null) }
+    var selectedDevice by remember { mutableStateOf<String?>(osdRequest?.macAddress?.takeIf { it.isNotBlank() }) }
     var showWatchDialog by remember { mutableStateOf(false) }
     var showFirmwareDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -56,6 +60,11 @@ fun MainScreen() {
     var permissionRequestInFlight by remember { mutableStateOf(false) }
     var requestResultReceived by remember { mutableStateOf(false) }
 
+    // Bluetooth ("Nearby devices") permissions. In the manual flow DeviceScanner has already obtained them;
+    // when started from OpenSeizureDetector the scanner is skipped, so ask here, before DFU can be started.
+    val bluetoothPermissionState = rememberMultiplePermissionsState(BLUETOOTH_PERMISSIONS)
+    var showBluetoothPermissionDialog by remember { mutableStateOf(osdRequest != null) }
+
     val dfuViewModel: DfuViewModel = hiltViewModel()
     val dfuState = dfuViewModel.dfuState.collectAsState().value
 
@@ -64,6 +73,26 @@ fun MainScreen() {
     val downloadState = firmwareViewModel.downloadState.collectAsState().value
     // The firmware URI is now sourced directly from the ViewModel.
     val firmwareUri by firmwareViewModel.downloadedUri.collectAsState()
+
+    // --- Started from the OpenSeizureDetector app: offer only the one qualifying release ---
+    // Qualifies = marked recommended AND newer than the version installed on the watch.
+    val osdRelease: FirmwareRelease? = remember(firmwareState, osdRequest) {
+        if (osdRequest != null && firmwareState is FirmwareUiState.Success)
+            OsdFirmwareRules.qualifyingRelease(firmwareState.index, osdRequest.installedVersion)
+        else null
+    }
+    // The list shown in the firmware dialog: just that one release (or none).
+    val visibleFirmwareState: FirmwareUiState =
+        if (osdRequest != null && firmwareState is FirmwareUiState.Success)
+            FirmwareUiState.Success(FirmwareIndex(releases = listOfNotNull(osdRelease), recommendedFw = 0))
+        else firmwareState
+    LaunchedEffect(osdRequest) {
+        if (osdRequest != null) firmwareViewModel.fetchFirmwareIndex()
+    }
+    LaunchedEffect(osdRelease) {
+        // Download it right away so that only "Start DFU" is left for the user.
+        osdRelease?.let { firmwareViewModel.downloadFirmware(it) }
+    }
 
     // Reset DFU state if a new firmware is selected (by observing the URI)
     LaunchedEffect(firmwareUri) {
@@ -114,7 +143,7 @@ fun MainScreen() {
 
     if (showFirmwareDialog) {
         FirmwareDialog(
-            firmwareState = firmwareState,
+            firmwareState = visibleFirmwareState,
             onDismiss = { showFirmwareDialog = false },
             onFirmwareSelected = { firmwareViewModel.downloadFirmware(it) }
         )
@@ -136,6 +165,12 @@ fun MainScreen() {
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }
+
+    BluetoothPermissionDialog(
+        permissionState = bluetoothPermissionState,
+        visible = showBluetoothPermissionDialog,
+        onDismiss = { showBluetoothPermissionDialog = false }
+    )
 
     if (showNotificationPermissionDialog) {
         AlertDialog(
@@ -239,7 +274,11 @@ fun MainScreen() {
                 "${stringResource(R.string.download_error)}: ${state.message}"
             else -> firmwareUri?.lastPathSegment?.let {
                 stringResource(R.string.status_selected_value, it)
-            } ?: stringResource(R.string.status_no_software_selected)
+            } ?: if (osdRequest != null && firmwareState is FirmwareUiState.Success && osdRelease == null) {
+                stringResource(R.string.osd_firmware_up_to_date)
+            } else {
+                stringResource(R.string.status_no_software_selected)
+            }
         }
         val firmwareHasTick = firmwareUri != null && downloadState !is DownloadState.Error
 
@@ -291,6 +330,7 @@ fun MainScreen() {
                 buttonLabelRes = R.string.select_firmware,
                 statusText = firmwareStatusText,
                 showTick = firmwareHasTick,
+                enabled = osdRequest == null || osdRelease != null,
                 onClick = {
                     firmwareViewModel.fetchFirmwareIndex()
                     showFirmwareDialog = true
@@ -306,6 +346,12 @@ fun MainScreen() {
                     val device = selectedDevice
                     val firmware = firmwareUri
                     if (device == null || firmware == null) return@ActionButtonRow
+
+                    // Never start the DFU without the Bluetooth permissions (the service would crash)
+                    if (!bluetoothPermissionState.allPermissionsGranted) {
+                        showBluetoothPermissionDialog = true
+                        return@ActionButtonRow
+                    }
 
                     if (postNotificationPermission == null || postNotificationPermission.status.isGranted) {
                         notificationPermissionDenied = false
